@@ -5,11 +5,11 @@
 class BrowserCompat {
     // Browser detection
     // Firefox has browser.runtime.getBrowserInfo, Chrome does not
-    static isFirefox = typeof browser !== 'undefined' && 
-                       browser.runtime?.getBrowserInfo !== undefined;
-    
+    static isFirefox = typeof browser !== 'undefined' &&
+        browser.runtime?.getBrowserInfo !== undefined;
+
     static isChrome = !BrowserCompat.isFirefox;
-    
+
     /**
      * Check if a specific API path is available
      * @param {string} apiPath - Dot-separated API path (e.g., 'sidePanel', 'power', 'system.display')
@@ -19,7 +19,7 @@ class BrowserCompat {
         const parts = apiPath.split('.');
         let obj = typeof browser !== 'undefined' ? browser : chrome;
         for (const part of parts) {
-            if (obj && typeof obj[part] !== 'undefined') {
+            if (obj && part in obj) {
                 obj = obj[part];
             } else {
                 return false;
@@ -27,7 +27,7 @@ class BrowserCompat {
         }
         return true;
     }
-    
+
     /**
      * Side Panel support detection
      * Side Panel is Chrome-specific (Chrome 114+)
@@ -36,7 +36,7 @@ class BrowserCompat {
     static get supportsSidePanel() {
         return BrowserCompat.isChrome && BrowserCompat.hasAPI('sidePanel');
     }
-    
+
     /**
      * Power API support detection
      * chrome.power is not available in Firefox
@@ -45,7 +45,7 @@ class BrowserCompat {
     static get supportsPowerAPI() {
         return BrowserCompat.hasAPI('power');
     }
-    
+
     /**
      * System Display API support detection
      * chrome.system.display is not available in Firefox
@@ -54,7 +54,7 @@ class BrowserCompat {
     static get supportsSystemDisplay() {
         return BrowserCompat.hasAPI('system.display');
     }
-    
+
     /**
      * downloads.onDeterminingFilename support detection
      * This event is not available in Firefox
@@ -63,7 +63,7 @@ class BrowserCompat {
     static get supportsOnDeterminingFilename() {
         return BrowserCompat.hasAPI('downloads.onDeterminingFilename');
     }
-    
+
     /**
      * Get screen size (cross-browser)
      * Uses system.display API on Chrome, falls back to window.screen on Firefox
@@ -82,7 +82,7 @@ class BrowserCompat {
             top: 0
         };
     }
-    
+
     /**
      * Request keep awake (cross-browser)
      * Silently ignored on Firefox where power API is not available
@@ -94,7 +94,7 @@ class BrowserCompat {
         }
         // Firefox: silently ignore - no power API available
     }
-    
+
     /**
      * Release keep awake (cross-browser)
      * Silently ignored on Firefox where power API is not available
@@ -105,7 +105,7 @@ class BrowserCompat {
         }
         // Firefox: silently ignore - no power API available
     }
-    
+
     /**
      * Get platform information (cross-browser)
      * Uses navigator.userAgentData on modern browsers, falls back to browser.runtime.getPlatformInfo

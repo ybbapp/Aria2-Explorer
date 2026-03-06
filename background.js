@@ -74,9 +74,9 @@ const isDownloadListened = () => downloadCapture.isListening;
 })()
 
 /**
- * Invoke a download task 
- * 
- * @param {DownloadItem} downloadItem 
+ * Invoke a download task
+ *
+ * @param {DownloadItem} downloadItem
  * @param {RpcItem} rpcItem
  * @returns {boolean} the result of creating download task
  */
@@ -109,7 +109,14 @@ async function download(downloadItem, rpcItem) {
         if (!rpcItem || !rpcItem.url) {
             rpcItem = getRpcServer(downloadItem.url + downloadItem.filename);
         }
-        downloadItem.dir = rpcItem.location;
+        if (downloadItem.filename) {
+            let lastSlashIndex = Math.max(downloadItem.filename.lastIndexOf('\\'), downloadItem.filename.lastIndexOf('/'));
+            if (lastSlashIndex !== -1) {
+                downloadItem.dir = downloadItem.filename.substring(0, lastSlashIndex);
+                downloadItem.filename = downloadItem.filename.substring(lastSlashIndex + 1);
+            }
+        }
+        if (!downloadItem.dir) downloadItem.dir = rpcItem.location;
         if (!downloadItem.filename) downloadItem.filename = '';
         if (Configs.askBeforeDownload || downloadItem.multiTask) {
             try {
@@ -158,8 +165,15 @@ async function send2Aria(downloadItem, rpcItem) {
     }
     options.header = headers;
     if (downloadItem.referrer) options.referer = downloadItem.referrer;
-    if (downloadItem.filename) options.out = downloadItem.filename;
-    if (downloadItem.dir) options.dir = downloadItem.dir;
+    if (downloadItem.filename) {
+        let lastSlashIndex = Math.max(downloadItem.filename.lastIndexOf('\\'), downloadItem.filename.lastIndexOf('/'));
+        if (lastSlashIndex !== -1) {
+            options.dir = downloadItem.filename.substring(0, lastSlashIndex);
+            downloadItem.filename = downloadItem.filename.substring(lastSlashIndex + 1);
+        }
+        options.out = downloadItem.filename;
+    }
+    if (downloadItem.dir && !options.dir) options.dir = downloadItem.dir;
     if (downloadItem.hasOwnProperty('options')) {
         options = Object.assign(options, downloadItem.options);
     }
@@ -200,8 +214,8 @@ async function send2Aria(downloadItem, rpcItem) {
 }
 
 /**
- * Get a rpc item whose pattern(s) matches the giving resource url 
- * 
+ * Get a rpc item whose pattern(s) matches the giving resource url
+ *
  * @param {string} url - The resource url to be downloaded
  * @return {RpcItem} a RpcItem which refers to an Aria2 RPC server
  */
@@ -279,15 +293,15 @@ function shouldCapture(downloadItem) {
     } else if (typeof downloadItem.totalBytes === 'number' && downloadItem.totalBytes >= 0) {
         fileSize = downloadItem.totalBytes;
     }
-    
+
     const threshold = Configs.fileSize * 1024 * 1024;
-    
+
     // If file size is unknown (-1), capture it by default (let aria2 handle it)
     // This is important for Firefox where size may not be known at onCreated time
     if (fileSize < 0) {
         return true;
     }
-    
+
     return fileSize >= threshold;
 }
 
@@ -330,16 +344,16 @@ async function captureDownload(downloadItem) {
     if (downloadItem.finalUrl && downloadItem.finalUrl != "about:blank") {
         downloadItem.url = downloadItem.finalUrl;
     }
-    
+
     const shouldCaptureResult = shouldCapture(downloadItem);
-    
+
     if (Configs.integration && shouldCaptureResult) {
         const downloadId = downloadItem.id;
-        
+
         // Cancel the browser download
         try {
             await chrome.downloads.cancel(downloadId);
-            
+
             // Firefox: erase the download from history to clean up UI
             if (BrowserCompat.isFirefox) {
                 setTimeout(async () => {
@@ -353,7 +367,7 @@ async function captureDownload(downloadItem) {
         } catch (err) {
             // Ignore cancel errors
         }
-        
+
         if (downloadItem.referrer == "about:blank") {
             downloadItem.referrer = "";
         }
@@ -1199,7 +1213,7 @@ async function notifyTaskStatus(data) {
 
 /**
  * Web page injector which will send all valid urls to background js
- * 
+ *
  * @param {Array} allowedExts - The file extension list which will export
  * @param {Array} blockedExts - The blocked file extension list which will not export
  */
