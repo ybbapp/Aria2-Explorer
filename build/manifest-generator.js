@@ -15,11 +15,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// Read version from package.json
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+
 // Base manifest with shared properties between Chrome and Firefox
 const baseManifest = {
     "name": "__MSG_appName__",
     "short_name": "A2E",
-    "version": "2.7.7",
+    "version": pkg.version,
     "manifest_version": 3,
     "default_locale": "en",
     "description": "__MSG_description__",
