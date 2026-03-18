@@ -1019,16 +1019,25 @@ function registerAllListeners() {
 
         if (changes.rpcList) {
             try {
+                const newOptions = Utils.exportRpcToAriaNg(changes.rpcList.newValue, null);
+                const optionsJson = JSON.stringify(newOptions);
                 const ariaNgUrl = chrome.runtime.getURL('ui/ariang/index.html');
                 chrome.tabs.query({ "url": ariaNgUrl }).then(function (tabs) {
                     if (tabs?.length > 0) {
                         for (const tab of tabs) {
-                            chrome.tabs.reload(tab.id);
+                            chrome.scripting.executeScript({
+                                target: { tabId: tab.id },
+                                func: (optionsJson) => {
+                                    localStorage.setItem("AriaNg.Options", optionsJson);
+                                    location.reload();
+                                },
+                                args: [optionsJson]
+                            });
                         }
                     }
                 });
             } catch (e) {
-                console.error("Failed to reload AriaNG tabs:", e);
+                console.error("Failed to sync AriaNG options:", e);
             }
         }
     });
