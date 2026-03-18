@@ -331,6 +331,7 @@ var Configs =
             Configs[textarea.id] = Array.from(tempSet);
         }
         StorageProxy.set(getConfigData());
+        syncRpcToAriaNg(Configs.rpcList);
     },
     upload: function () {
         try {
@@ -507,18 +508,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
         }
         Configs.init();
         if (isRpcListChanged(changes) && !changes.hasOwnProperty("ariaNgOptions")) {
-            let oldAriaNgOptions = localStorage[AriaNgOptionsKey];
-            let ariaNgOptions = null;
-            try {
-                ariaNgOptions = JSON.parse(oldAriaNgOptions);
-            } catch (error) {
-                console.warn("The stored AriaNG options is null or invalid.")
-            }
-            let newAriaNgOptions = JSON.stringify(Utils.exportRpcToAriaNg(changes.rpcList.newValue, ariaNgOptions));
-            let str = chrome.i18n.getMessage("OverwriteAriaNgRpcWarn");
-            if (newAriaNgOptions != oldAriaNgOptions && confirm(str)) {
-                localStorage[AriaNgOptionsKey] = newAriaNgOptions;
-            }
+            syncRpcToAriaNg(changes.rpcList.newValue);
         }
         if (changes.captureMagnet)
             toggleMagnetHandler(changes.captureMagnet.newValue);
@@ -548,6 +538,25 @@ window.onkeyup = function (e) {
             button = document.getElementById("importConfig");
         }
         button?.focus({ focusVisible: true });
+    }
+}
+
+/**
+ * Sync RPC list to AriaNg's localStorage options (no confirmation needed)
+ * Only updates RPC-related fields, preserving other AriaNg settings.
+ * @param {Array} rpcList
+ */
+function syncRpcToAriaNg(rpcList) {
+    let ariaNgOptions = null;
+    try {
+        let stored = localStorage.getItem(AriaNgOptionsKey);
+        if (stored) ariaNgOptions = JSON.parse(stored);
+    } catch (error) {
+        console.warn("syncRpcToAriaNg: stored AriaNG options is invalid.");
+    }
+    let newAriaNgOptions = JSON.stringify(Utils.exportRpcToAriaNg(rpcList, ariaNgOptions));
+    if (newAriaNgOptions !== localStorage.getItem(AriaNgOptionsKey)) {
+        localStorage.setItem(AriaNgOptionsKey, newAriaNgOptions);
     }
 }
 

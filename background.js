@@ -1016,6 +1016,21 @@ function registerAllListeners() {
         if ("iconOffStyle" in changes && !Configs.integration) {
             IconManager.turnOff(Configs.iconOffStyle);
         }
+
+        if (changes.rpcList) {
+            try {
+                const ariaNgUrl = chrome.runtime.getURL('ui/ariang/index.html');
+                chrome.tabs.query({ "url": ariaNgUrl }).then(function (tabs) {
+                    if (tabs?.length > 0) {
+                        for (const tab of tabs) {
+                            chrome.tabs.reload(tab.id);
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Failed to reload AriaNG tabs:", e);
+            }
+        }
     });
 }
 
