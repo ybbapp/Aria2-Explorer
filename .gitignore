@@ -24,6 +24,6 @@ npm-debug.log*
 # Temporary files
 *.tmp
 *.temp
-
+.sisyphus
 # Package lock (optional - uncomment if you want to ignore)
 # package-lock.json
