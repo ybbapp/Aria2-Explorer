@@ -330,7 +330,9 @@ var Configs =
             tempSet.delete("");
             Configs[textarea.id] = Array.from(tempSet);
         }
-        StorageProxy.set(getConfigData());
+        const configData = getConfigData();
+        console.debug('[Aria2] Configs.save: saving config', JSON.stringify(configData));
+        StorageProxy.set(configData);
         syncRpcToAriaNg(Configs.rpcList);
     },
     upload: function () {
@@ -350,10 +352,14 @@ var Configs =
                 return;
         }
         // Use getConfigData() to extract only data properties (no methods)
-        chrome.storage.sync.set(getConfigData()).then(() => {
+        const uploadData = getConfigData();
+        console.debug('[Aria2] upload: uploading to storage.sync', JSON.stringify(uploadData));
+        chrome.storage.sync.set(uploadData).then(() => {
+            console.debug('[Aria2] upload: success');
             let str = chrome.i18n.getMessage("uploadConfigSucceed");
             Configs.notifySyncResult(str, "alert-success");
         }).catch(error => {
+            console.error('[Aria2] upload: failed', error);
             let str = chrome.i18n.getMessage("uploadConfigFailed");
             if (error.message.includes("QUOTA_BYTES_PER_ITEM")) {
                 /* There must be too many BT trackers in the Aria2 settings */
@@ -363,7 +369,9 @@ var Configs =
         });
     },
     download: function () {
+        console.debug('[Aria2] download: fetching from storage.sync');
         chrome.storage.sync.get().then(async configs => {
+            console.debug('[Aria2] download: received configs keys=', Object.keys(configs), 'rpcList=', JSON.stringify(configs.rpcList));
             if (Object.keys(configs).length > 0) {
                 try {
                     if (typeof configs.ariaNgOptions === "string") {
@@ -371,6 +379,7 @@ var Configs =
                     }
                     const optionsLength = Object.keys(configs.ariaNgOptions).length;
                     const defaultLength = Object.keys(DefaultAriaNgOptions).length;
+                    console.debug('[Aria2] download: ariaNgOptions keys=', optionsLength, 'default keys=', defaultLength);
                     if (optionsLength >= defaultLength) {
                         localStorage.setItem(AriaNgOptionsKey, JSON.stringify(configs.ariaNgOptions));
                     } else {
@@ -382,7 +391,9 @@ var Configs =
                 }
                 Object.assign(Configs, configs);
                 // Use getConfigData() to extract only data properties (no methods)
-                await StorageProxy.set(getConfigData());
+                const saveData = getConfigData();
+                console.debug('[Aria2] download: saving to StorageProxy', JSON.stringify(saveData));
+                await StorageProxy.set(saveData);
                 let str = chrome.i18n.getMessage("downloadConfigSucceed");
                 Configs.notifySyncResult(str, "alert-success");
             } else {
@@ -555,7 +566,11 @@ function syncRpcToAriaNg(rpcList) {
         console.warn("syncRpcToAriaNg: stored AriaNG options is invalid.");
     }
     let newAriaNgOptions = JSON.stringify(Utils.exportRpcToAriaNg(rpcList, ariaNgOptions));
-    if (newAriaNgOptions !== localStorage.getItem(AriaNgOptionsKey)) {
+    const existing = localStorage.getItem(AriaNgOptionsKey);
+    console.debug('[Aria2] syncRpcToAriaNg: rpcList=', JSON.stringify(rpcList));
+    console.debug('[Aria2] syncRpcToAriaNg: newOptions=', newAriaNgOptions);
+    console.debug('[Aria2] syncRpcToAriaNg: changed=', newAriaNgOptions !== existing);
+    if (newAriaNgOptions !== existing) {
         localStorage.setItem(AriaNgOptionsKey, newAriaNgOptions);
     }
 }
@@ -587,7 +602,7 @@ function toggleMagnetHandler(flag) {
     let magnetPage = chrome.runtime.getURL("magnet.html") + "?action=magnet&url=%s";
     if (flag) {
         navigator.registerProtocolHandler("magnet", magnetPage, "Capture Magnet");
-    } else {
+    } else if (typeof navigator.unregisterProtocolHandler === "function") {
         navigator.unregisterProtocolHandler("magnet", magnetPage);
     }
 }

@@ -110,6 +110,7 @@ async function download(downloadItem, rpcItem) {
             rpcItem = getRpcServer(downloadItem.url + downloadItem.filename);
         }
         downloadItem.dir = rpcItem.location;
+        console.debug('[Aria2] download: rpcItem=', JSON.stringify(rpcItem), 'dir=', downloadItem.dir, 'url=', downloadItem.url);
         if (!downloadItem.filename) downloadItem.filename = '';
         if (Configs.askBeforeDownload || downloadItem.multiTask) {
             try {
@@ -207,6 +208,7 @@ async function send2Aria(downloadItem, rpcItem) {
  */
 function getRpcServer(url) {
     let defaultIndex = 0;
+    console.debug('[Aria2] getRpcServer: url=', url, 'rpcList=', JSON.stringify(Configs.rpcList));
     for (let i = 1; i < Configs.rpcList.length; i++) {
         const patternStr = Configs.rpcList[i]['pattern'];
         if (patternStr == '*') {
@@ -216,10 +218,12 @@ function getRpcServer(url) {
         for (let pattern of patternStr.split(',')) {
             pattern = pattern.trim();
             if (matchRule(url, pattern)) {
-                return Configs.rpcList[i];
+                    console.debug('[Aria2] getRpcServer: matched pattern=', pattern, 'rpcItem=', JSON.stringify(Configs.rpcList[i]));
+                    return Configs.rpcList[i];
             }
         }
     }
+    console.debug('[Aria2] getRpcServer: no pattern matched, using default index=', defaultIndex, 'rpcItem=', JSON.stringify(Configs.rpcList[defaultIndex]));
     return Configs.rpcList[defaultIndex];
 }
 
@@ -332,6 +336,7 @@ async function captureDownload(downloadItem) {
     }
     
     const shouldCaptureResult = shouldCapture(downloadItem);
+    console.debug('[Aria2] captureDownload: url=', downloadItem.url, 'integration=', Configs.integration, 'shouldCapture=', shouldCaptureResult);
     
     if (Configs.integration && shouldCaptureResult) {
         const downloadId = downloadItem.id;
@@ -1022,9 +1027,13 @@ function registerAllListeners() {
                 const newOptions = Utils.exportRpcToAriaNg(changes.rpcList.newValue, null);
                 const optionsJson = JSON.stringify(newOptions);
                 const ariaNgUrl = chrome.runtime.getURL('ui/ariang/index.html');
+                console.debug('[Aria2] storage.onChanged rpcList: newValue=', JSON.stringify(changes.rpcList.newValue));
+                console.debug('[Aria2] storage.onChanged rpcList: computed AriaNG options=', optionsJson);
                 chrome.tabs.query({ "url": ariaNgUrl }).then(function (tabs) {
+                    console.debug('[Aria2] storage.onChanged rpcList: found AriaNG tabs=', tabs?.length ?? 0);
                     if (tabs?.length > 0) {
                         for (const tab of tabs) {
+                            console.debug('[Aria2] storage.onChanged rpcList: injecting into tab=', tab.id, tab.url);
                             chrome.scripting.executeScript({
                                 target: { tabId: tab.id },
                                 func: (optionsJson) => {
@@ -1032,10 +1041,14 @@ function registerAllListeners() {
                                     location.reload();
                                 },
                                 args: [optionsJson]
+                            }).then(() => {
+                                console.debug('[Aria2] storage.onChanged rpcList: executeScript success for tab=', tab.id);
+                            }).catch(e => {
+                                console.error('[Aria2] storage.onChanged rpcList: executeScript failed for tab=', tab.id, e);
                             });
                         }
                     }
-                });
+              });
             } catch (e) {
                 console.error("Failed to sync AriaNG options:", e);
             }
@@ -1047,6 +1060,7 @@ function registerAllListeners() {
 function init() {
     StorageProxy.get().then((configs) => {
         Object.assign(Configs, configs);
+        console.debug('[Aria2] init: loaded configs', JSON.stringify({ rpcList: Configs.rpcList, integration: Configs.integration }));
         let url = Configs.webUIOpenStyle == "popup" ? chrome.runtime.getURL('ui/ariang/popup.html') : '';
         chrome.action.setPopup({
             popup: url
