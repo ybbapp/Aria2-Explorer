@@ -1,6 +1,6 @@
 {
   "name": "aria2-explorer",
-  "version": "2.7.9",
+  "version": "2.7.10",
   "description": "Aria2 download manager browser extension with Chrome and Firefox support",
   "private": true,
   "scripts": {
